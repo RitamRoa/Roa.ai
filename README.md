@@ -3,11 +3,12 @@
 basically learnt on api calling on how you can efficietly use it my roa.py file is perfect for that. Used ai for setting up flask and frontend
 i have hosted backend in google cloud, link : https://roa-expert-system-115413225766.asia-south1.run.app
 just open the index.html, wont work if you open up the above link. Used ai for setting up dockerfile cuz i knew too less about it.
+only 50 requests gemini bro please increase i want this to be used by my friends more:((((
 
 ## what?
 
-so it is more of a fact-checker, the thing is right now it might be very vulnerable to prompt injections, i need to fix that up.
-as of 16th august: now should work if you open up the index
+so it is more of a fact-checker, the thing is : right now it might be very vulnerable to prompt injections, i need to fix that up.
+as of 16th august: now should work if you open up the index and when you download the apk... might be few bugs need to fix that up (ui also)
 
 ## how?
 
@@ -18,9 +19,13 @@ as of 16th august: now should work if you open up the index
 ### requirements:
 
 i would suggest you to install these packages :
-langchain-google-genai==0.0.1
-langchain==0.2.1
-langgraph==0.0.60
-pydantic==2.8.2
-python-dotenv==1.0.1
-google-generativeai==0.7.0
+flask
+flask-cors
+requests
+langchain-google-genai
+pydantic
+langgraph
+
+## why?
+
+well i always wanted to do some kinda of app. This is something that i was able to do while just learning how to do an ai agent: the guide of which was there in the latest open-source magazine. So if you dont mind, you can always test out the app roa-ai.apk
