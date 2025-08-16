@@ -9,10 +9,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 from langgraph.graph import StateGraph, END
 
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBys6zKt9RtgAOEjYrLvq6CjxAkqLGxSzQ")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "A***Q")
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY 
 
-OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "0d72d2c544944b4f8baeb2889908a64c")
+OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "0**4c")
 GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY", "YOUR_GNEWS_API_KEY")
 
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
