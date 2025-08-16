@@ -5,13 +5,24 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
 
+# LangGraph and Google AI imports
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 from langgraph.graph import StateGraph, END
 
-os.environ["GOOGLE_API_KEY"] = "AIzaSyBys6zKt9RtgAOEjYrLvq6CjxAkqLGxSzQ"
-OPENWEATHERMAP_API_KEY = "0d72d2c544944b4f8baeb2889908a64c" 
-GNEWS_API_KEY = "849de1cac921edd85c35a5c6c4c089f5" 
+# --- API Keys ---
+# Set your Google AI API key here
+# For Cloud Run, this will be set as an environment variable in the deployment configuration
+# For local testing, ensure it's set in your environment or hardcoded temporarily
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBys6zKt9RtgAOEjYrLvq6CjxAkqLGxSzQ")
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY # Ensure it's set for langchain
+
+# IMPORTANT: Insert your actual API keys below.
+# For Cloud Run, these will also be set as environment variables.
+OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "0d72d2c544944b4f8baeb2889908a64c")
+GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY", "YOUR_GNEWS_API_KEY") # <--- Paste your GNews API key here for local testing!
+
+# Initialize the LLM with the gemini-1.5-flash-latest model
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
 
 class ExpertSystemState(BaseModel):
@@ -19,8 +30,11 @@ class ExpertSystemState(BaseModel):
     category: str = None
     question_type: str = None
     response: str = None
+
+# log_event will just print to console for the API backend
 def log_event(step: str, message: str):
     print(f"[{step}] {message}")
+
 def super_agent(state: ExpertSystemState):
     input_data = state.user_input
     prompt_template = f"""
@@ -40,7 +54,7 @@ def super_agent(state: ExpertSystemState):
     elif "news" in categorization_response.lower():
         category = "news"
     elif "joke" in categorization_response.lower():
-        category = "joke"
+            category = "joke"
     else:
         category = "others"
     log_event("super_agent", f"Categorized as: {category}")
@@ -49,14 +63,48 @@ def super_agent(state: ExpertSystemState):
 def weather(state: ExpertSystemState) -> Dict[str, Any]:
     """Handles weather-related queries via LangGraph - this is the AI-routed path."""
     log_event("weather", "AI-routed weather. Attempting to fetch real-time weather data.")
-    city = "Bengaluru"
-    return _fetch_weather_data(city) 
+    city = "London" # Default city for AI-routed queries
+    base_url = "http://api.openweathermap.org/data/2.5/weather?"
+    complete_url = f"{base_url}q={city}&appid={OPENWEATHERMAP_API_KEY}&units=metric"
+
+    try:
+        response = requests.get(complete_url)
+        data = response.json()
+
+        if data.get("cod") == 200:
+            main_data = data.get("main", {})
+            weather_data = data.get("weather", [])
+            
+            temperature = main_data.get("temp")
+            feels_like = main_data.get("feels_like")
+            description = weather_data[0].get("description") if weather_data else "not available"
+            humidity = main_data.get("humidity")
+            wind_speed = data.get("wind", {}).get("speed")
+
+            response_text = (
+                f"The weather in {city} is {description}. "
+                f"Temperature: {temperature}°C (feels like {feels_like}°C). "
+                f"Humidity: {humidity}%. Wind speed: {wind_speed} m/s."
+            )
+            log_event("_fetch_weather_data", f"Successfully fetched weather for {city}.")
+        else:
+            error_message = data.get("message", "Unknown error fetching weather.")
+            response_text = f"Could not fetch weather for {city}. Error: {error_message}. (Is OpenWeatherMap API key valid or quota exceeded?)"
+            log_event("_fetch_weather_data", f"Failed to fetch weather: {error_message}")
+    except requests.exceptions.RequestException as e: # Corrected indentation
+        response_text = f"Network error fetching weather: {e}. Please check your internet connection or API endpoint."
+        log_event("_fetch_weather_data", f"Network error: {e}")
+    except Exception as e: # Corrected indentation
+        response_text = f"An unexpected error occurred while processing weather data: {e}"
+        log_event("_fetch_weather_data", f"Unexpected error: {e}")
+
+    return {"response": response_text}
 
 def news(state: ExpertSystemState) -> Dict[str, Any]:
     """Handles news-related queries via LangGraph - this is the AI-routed path."""
     log_event("news", "AI-routed news. Attempting to fetch real-time news headlines.")
-    query_topic = "latest headlines" 
-    return _fetch_news_data(query_topic) 
+    query_topic = "latest headlines" # Default topic for AI-routed queries
+    return _fetch_news_data(query_topic) # Call helper function
 
 def joke(state: ExpertSystemState) -> Dict[str, Any]:
     """Handles joke-related queries by generating a joke using Gemini."""
@@ -96,6 +144,8 @@ workflow.add_edge("news", END)
 workflow.add_edge("joke", END)
 workflow.add_edge("others", END)
 app_langgraph = workflow.compile()
+
+# --- Helper functions for API calls ---
 def _fetch_weather_data(city: str) -> Dict[str, Any]:
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
     complete_url = f"{base_url}q={city}&appid={OPENWEATHERMAP_API_KEY}&units=metric"
@@ -134,19 +184,23 @@ def _fetch_weather_data(city: str) -> Dict[str, Any]:
     return {"response": response_text}
 
 def _fetch_news_data(topic: str) -> Dict[str, Any]:
+    # Changed to GNews API
     base_url = "https://gnews.io/api/v4/top-headlines?"
+    # Using 'lang=en' for English, 'country=in' for India, and 'max=5' to get up to 5 articles
     complete_url = f"{base_url}lang=en&country=in&max=5&token={GNEWS_API_KEY}" 
 
     try:
         response = requests.get(complete_url)
         data = response.json()
 
-        if data.get("totalArticles") and data.get("articles"): 
+        if data.get("totalArticles") and data.get("articles"): # Check for totalArticles and if articles list is not empty
             articles = data["articles"]
             news_headlines = "Here are some top headlines:\n"
-            for i, article in enumerate(articles[:5]):
+            # CHANGED: Now displays up to 5 articles, as max=5 is already fetched
+            for i, article in enumerate(articles[:5]): 
                 title = article.get("title", "No title")
                 source = article.get("source", {}).get("name", "Unknown source")
+                # url = article.get("url", "#") # You can include URLs if you want to display them
                 news_headlines += f"{i+1}. {title} (Source: {source})\n"
             response_text = news_headlines
             log_event("_fetch_news_data", f"Successfully fetched news for topic: {topic}.")
@@ -162,14 +216,18 @@ def _fetch_news_data(topic: str) -> Dict[str, Any]:
 
     return {"response": response_text}
 
-
+# --- Flask API Setup ---
 app_flask = Flask(__name__)
-CORS(app_flask) 
+CORS(app_flask) # Enable CORS for frontend requests
+
+# Route to serve the index.html file when accessing the root URL
 @app_flask.route('/')
 def serve_index():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
+
 @app_flask.route('/ask', methods=['POST'])
 def ask_expert_system():
+    # This route uses the LangGraph expert system
     user_query = request.json.get('query')
     if not user_query:
         return jsonify({"error": "No query provided"}), 400
@@ -190,12 +248,13 @@ def ask_expert_system():
         print(f"Error during AI processing: {e}")
         return jsonify({"error": str(e)}), 500
 
+# NEW: Direct API routes for buttons
 @app_flask.route('/weather_bengaluru', methods=['GET'])
 def get_bengaluru_weather():
     """Directly fetches weather for Bengaluru without LangGraph routing."""
     log_event("API Direct", "Received request for Bengaluru weather.")
     start_time = time.time()
-    result = _fetch_weather_data("Bengaluru")
+    result = _fetch_weather_data("Bengaluru") # Use the helper function directly
     end_time = time.time()
     return jsonify({
         "response": result["response"],
@@ -207,7 +266,7 @@ def get_news_headlines():
     """Directly fetches top headlines without LangGraph routing."""
     log_event("API Direct", "Received request for top headlines.")
     start_time = time.time()
-    result = _fetch_news_data("latest headlines") 
+    result = _fetch_news_data("latest headlines") # Use the helper function directly
     end_time = time.time()
     return jsonify({
         "response": result["response"],
@@ -215,5 +274,9 @@ def get_news_headlines():
     })
 
 if __name__ == '__main__':
-    print("Starting Flask API on http://127.0.0.1:5000")
-    app_flask.run(host='0.0.0.0', port=5000)
+    # Get the port from the environment variable (Cloud Run provides this)
+    # Default to 8080 if not found (e.g., for local testing without setting ENV)
+    port = int(os.environ.get("PORT", 8080))
+    # Run the Flask app, binding to all interfaces and the specified port
+    print(f"Starting Flask API on 0.0.0.0:{port}")
+    app_flask.run(host='0.0.0.0', port=port)

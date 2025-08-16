@@ -235,11 +235,11 @@
         const weatherButton = document.getElementById('weather-button'); // New button element
         const newsButton = document.getElementById('news-button');     // New button element
 
-        const API_URL = 'http://127.0.0.1:5000/ask'; // Original API for general queries
-        // CORRECTED: Updated to match the Flask routes in roa.py
-        const WEATHER_API_URL = 'http://127.0.0.1:5000/weather_bengaluru'; 
-        const NEWS_API_URL = 'http://127.0.0.1:5000/news_headlines';     
-
+        // UPDATED: API URLs now point to your deployed Cloud Run service
+        const CLOUD_RUN_BASE_URL = 'https://roa-expert-system-115413225766.asia-south1.run.app';
+        const API_URL = `${CLOUD_RUN_BASE_URL}/ask`;
+        const WEATHER_API_URL = `${CLOUD_RUN_BASE_URL}/weather_bengaluru`;
+        const NEWS_API_URL = `${CLOUD_RUN_BASE_URL}/news_headlines`;   
         let currentPromptUser = '@You>';
         terminalPrompt.textContent = currentPromptUser + ' ';
 
