@@ -1,4 +1,4 @@
-# non vibe - coded my own ai 
+# non vibe - coded my own ai (well took a bit help for folder structure cuz i am still learning :)))
   right now only works on terminal, you ask a question and it gives you the answer to it in the most short way possible, it is very concise and sharp, unlike other ai's which just gives too much unwanted explanation.
 
 ## what? 
