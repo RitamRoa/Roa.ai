@@ -1,7 +1,7 @@
 # my own ai (well took a bit help for folder structure cuz i am still learning..
 
 basically learnt on api calling on how you can efficietly use it my roa.py file is perfect for that. Used ai for setting up flask and frontend
-i have hosted backend in google cloud, link : https://roa-expert-system-115413225766.asia-south1.run.app
+i have hosted backend in google cloud, 
 just open the index.html, wont work if you open up the above link. Used ai for setting up dockerfile cuz i knew too less about it.
 only 50 requests gemini bro please increase i want this to be used by my friends more:((((
 
