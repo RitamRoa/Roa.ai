@@ -1,0 +1,373 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roa Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Keyframe Animations */
+        @keyframes blink-caret {
+            from, to { border-right-color: transparent }
+            50% { border-right-color: #0F0; } /* Bright green blinking caret */
+        }
+
+        @keyframes scanline-effect {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 0% 100%; }
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.7); border-color: #0C0; }
+            50% { box-shadow: 0 0 15px rgba(50, 255, 50, 0.9); border-color: #0F0; } /* Brighter green */
+            100% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.7); border-color: #0C0; }
+        }
+
+        @keyframes fadeInSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scaleY(0.5); /* Start squashed vertically */
+                text-shadow: 0 0 10px rgba(0,255,0,0.5); /* Start with a glow */
+                filter: blur(5px); /* Start blurred */
+            }
+            50% {
+                opacity: 0.7;
+                transform: translateY(0) scaleY(1.1); /* Slightly overshoot for elasticity */
+                text-shadow: 0 0 5px rgba(0,255,0,0.8); /* Maintain some glow */
+                filter: blur(2px); /* Less blurred */
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scaleY(1);
+                text-shadow: 0 0 0px transparent; /* End clear */
+                filter: blur(0);
+            }
+        }
+
+        @keyframes text-decode-reveal {
+            0% { opacity: 0; filter: blur(5px); text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+            50% { opacity: 0.5; filter: blur(2px); text-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            100% { opacity: 1; filter: blur(0); text-shadow: none; }
+        }
+
+        /* Global Body Styles */
+        body {
+            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #0C0; /* Slightly darker main green text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow: hidden;
+            border: 2px solid #0C0; /* Main border color */
+            animation: pulse-border 4s infinite alternate; /* Animating border glow */
+            background-image: linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px);
+            background-size: 100% 2px;
+            animation: scanline-effect 1s infinite linear; /* Subtle scanline effect */
+        }
+
+        /* App Header */
+        #app-header {
+            background-image: linear-gradient(to right, #001100, #002200); /* Subtle dark green gradient */
+            color: #0C0; /* Header text color */
+            padding: 10px;
+            text-align: left;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-bottom: 1px solid #0C0;
+            white-space: pre;
+            text-shadow: 0 0 5px #0F0; /* Bright green text glow */
+        }
+
+        /* Chat Container */
+        #chat-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Message Styling */
+        .message {
+            margin-bottom: 10px;
+            padding: 5px 0;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            animation: fadeInSlideUp 0.5s ease-out forwards; /* General animation for new messages */
+            opacity: 0; /* Start invisible for animation */
+        }
+        .user-message .prefix {
+            color: #00FFFF; /* Vibrant Cyan for user's prompt */
+        }
+        .ai-message .prefix {
+            color: #FF00FF; /* Vibrant Magenta for Roa's prompt */
+        }
+        .message .timestamp {
+            color: #0FF; /* Aqua for timestamp */
+            margin-right: 10px;
+        }
+
+        /* Unique AI Response Text Animation - applied to all AI responses */
+        .ai-response-text {
+            display: inline-block; /* Essential for transform/opacity on text */
+            animation: text-decode-reveal 1s ease-out forwards; /* Apply decoding animation */
+            opacity: 0; /* Start invisible for this animation */
+        }
+
+        /* Input Area */
+        #input-area {
+            display: flex;
+            padding: 10px 15px;
+            background-image: linear-gradient(to top, #001a00, #000000); /* Subtle green-black gradient */
+            border-top: 1px solid #0C0;
+        }
+        #terminal-prompt {
+            color: #0C0; /* Prompt text color */
+            margin-right: 5px;
+            white-space: nowrap;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 5px;
+            background-color: #000;
+            color: #0C0; /* Input text color */
+            border: none;
+            outline: none;
+            font-size: 1em;
+            caret-color: #0F0; /* Bright green blinking cursor */
+            border-right: 2px solid #0F0; /* Initial caret look */
+            animation: blink-caret 1s step-end infinite; /* Blinking cursor animation */
+        }
+
+        /* Direct Action Buttons Container */
+        #action-buttons {
+            display: flex;
+            justify-content: center; /* Center the buttons */
+            gap: 10px; /* Space between buttons */
+            padding: 10px 15px;
+            background-color: #000; /* Match terminal background */
+            border-top: 1px dashed #333;
+        }
+
+        .action-button {
+            background-image: linear-gradient(to bottom, #0AF, #05A); /* Blue gradient */
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px; /* Slightly rounded corners */
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            transition: background-image 0.3s ease, transform 0.1s ease;
+        }
+
+        .action-button:hover {
+            background-image: linear-gradient(to top, #0CF, #0AF); /* Lighter blue on hover */
+            transform: translateY(-2px); /* Lift effect */
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Send Button (Main Input) */
+        #send-button {
+            background-image: linear-gradient(to bottom, #0F0, #0A0); /* Bright green gradient */
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+        #send-button:hover {
+            background-image: linear-gradient(to top, #3F3, #0F0); /* Lighter gradient on hover */
+            transform: scale(1.1); /* Pop effect on hover */
+        }
+        #send-button:active {
+            transform: scale(0.95); /* Click effect */
+        }
+        #send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Status Label */
+        #status-label {
+            text-align: center;
+            padding: 5px;
+            font-size: 0.8em;
+            color: #0FF; /* Aqua for status */
+            background-color: #000;
+            border-top: 1px dashed #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-header">ROA CONSOLE</div>
+    <div id="chat-container"></div>
+    <div id="status-label">Status: Ready</div>
+
+    <!-- NEW: Action Buttons Area -->
+    <div id="action-buttons">
+        <button id="weather-button" class="action-button">Weather in Bengaluru</button>
+        <button id="news-button" class="action-button">Top Headlines</button>
+    </div>
+
+    <div id="input-area">
+        <span id="terminal-prompt"></span><input type="text" id="user-input" autofocus>
+        <button id="send-button">▲</button>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const statusLabel = document.getElementById('status-label');
+        const terminalPrompt = document.getElementById('terminal-prompt');
+        const weatherButton = document.getElementById('weather-button'); // New button element
+        const newsButton = document.getElementById('news-button');     // New button element
+
+        const API_URL = 'http://127.0.0.1:5000/ask'; // Original API for general queries
+        // CORRECTED: Updated to match the Flask routes in roa.py
+        const WEATHER_API_URL = 'http://127.0.0.1:5000/weather_bengaluru'; 
+        const NEWS_API_URL = 'http://127.0.0.1:5000/news_headlines';     
+
+        let currentPromptUser = '@You>';
+        terminalPrompt.textContent = currentPromptUser + ' ';
+
+        function getCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            return `[${hours}:${minutes}:${seconds}]`;
+        }
+
+        function addMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+
+            const timestamp = getCurrentTime();
+            
+            if (sender === 'user') {
+                msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">${currentPromptUser}</span> ${text}`;
+            } else {
+                msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">@Roa></span> <span class="ai-response-text">${text}</span>`;
+            }
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function setInputState(disabled) {
+            userInput.disabled = disabled;
+            sendButton.disabled = disabled;
+            weatherButton.disabled = disabled;
+            newsButton.disabled = disabled;
+            if (disabled) {
+                statusLabel.textContent = 'Status: Thinking...';
+            } else {
+                statusLabel.textContent = 'Status: Ready';
+            }
+        }
+
+        async function sendMessage() {
+            const query = userInput.value.trim();
+            if (!query) return;
+
+            addMessage(query, 'user');
+            userInput.value = '';
+            userInput.focus();
+
+            if (query.toLowerCase() === 'quit' || query.toLowerCase() === 'exit') {
+                addMessage("Goodbye! Exiting session.", 'ai');
+                statusLabel.textContent = "Status: Session ended.";
+                setInputState(true); // Disable all inputs
+                return;
+            }
+
+            setInputState(true); // Disable inputs while thinking
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.response, 'ai');
+                    statusLabel.textContent = `Status: Ready (${data.time_taken})`;
+                } else {
+                    addMessage(`Error: ${data.error || 'Unknown error'}`, 'ai');
+                    statusLabel.textContent = 'Status: Error';
+                }
+            } catch (error) {
+                addMessage(`Network Error: ${error.message}. Is the backend running?`, 'ai');
+                statusLabel.textContent = 'Status: Network Error';
+                console.error('Fetch error (general):', error);
+            } finally {
+                setInputState(false); // Re-enable inputs
+            }
+        }
+
+        async function sendDirectApiRequest(endpoint, queryText) {
+            addMessage(queryText, 'user'); // Show user's "action"
+            userInput.value = ''; // Clear input field if something was there
+            userInput.focus(); // Keep focus
+
+            setInputState(true); // Disable inputs while thinking
+
+            try {
+                // Ensure correct HTTP method for direct API calls (GET)
+                const response = await fetch(endpoint, { method: 'GET' }); 
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.response, 'ai');
+                    statusLabel.textContent = `Status: Ready (${data.time_taken || 'N/A'})`; // time_taken might be N/A for GET
+                } else {
+                    addMessage(`Error: ${data.error || 'Unknown error'}`, 'ai');
+                    statusLabel.textContent = 'Status: Error';
+                }
+            } catch (error) {
+                addMessage(`Network Error: ${error.message}. Is the backend running?`, 'ai');
+                statusLabel.textContent = 'Status: Network Error';
+                console.error('Fetch error (direct API):', error);
+            } finally {
+                setInputState(false); // Re-enable inputs
+            }
+        }
+
+        // Event Listeners for Buttons
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        weatherButton.addEventListener('click', () => {
+            sendDirectApiRequest(WEATHER_API_URL, "Weather in Bengaluru");
+        });
+        newsButton.addEventListener('click', () => {
+            sendDirectApiRequest(NEWS_API_URL, "Top Headlines");
+        });
+
+
+        // Initial welcome messages with terminal formatting
+        addMessage("I am Roa", "ai");
+        addMessage("I give quick answers to your questions, or you can use the direct buttons below!", "ai");
+        addMessage("Type 'quit' or 'exit' to end the session.", "ai");
+    </script>
+</body>
+</html>
+```
