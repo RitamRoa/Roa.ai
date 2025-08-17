@@ -1,6 +1,6 @@
 # my own ai (well took a bit help for folder structure cuz i am still learning..
 
-basically learnt on api calling on how you can efficietly use it my roa.py file is perfect for that. Used ai for setting up flask and frontend
+basically learnt on api calling on how you can efficietly use it my roa.py file is perfect for that. Used ai for setting up flask and frontend YES I LOVE THE BITCHAT INTERFACE thank you so much jackjackbits
 i have hosted backend in google cloud, 
 just open the index.html, wont work if you open up the above link. Used ai for setting up dockerfile cuz i knew too less about it.
 only 50 requests gemini bro please increase i want this to be used by my friends more:((((
