@@ -5,6 +5,9 @@ i have hosted backend in google cloud,
 just open the index.html, wont work if you open up the above link. Used ai for setting up dockerfile cuz i knew too less about it.
 only 50 requests gemini bro please increase i want this to be used by my friends more:((((
 
+<img width="200" height="650" alt="image" src="https://github.com/user-attachments/assets/be9d8e58-b6cc-4081-a7e5-6f08eb8d3b6e" />
+
+
 ## what?
 
 so it is more of a fact-checker, the thing is : right now it might be very vulnerable to prompt injections, i need to fix that up.
