@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -58,7 +60,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden;
+            overflow: hidden; /* Important for overall layout control */
             border: 2px solid #0C0; /* Main border color */
             animation: pulse-border 4s infinite alternate; /* Animating border glow */
             background-image: linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px);
@@ -82,11 +84,14 @@
         /* Chat Container */
         #chat-container {
             flex-grow: 1;
-            display: flex;
+            /* NEW: Add flex-shrink and a base height to help overflow-y */
+            flex-shrink: 1; 
+            height: 0; /* Important for flex-grow in a column layout */
+            display: flex; /* Keep flex for message arrangement */
             flex-direction: column;
             padding: 15px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: auto; /* Enable vertical scrolling */
+            -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
         }
 
         /* Message Styling */
@@ -239,7 +244,8 @@
         const CLOUD_RUN_BASE_URL = 'https://roa-expert-system-115413225766.asia-south1.run.app';
         const API_URL = `${CLOUD_RUN_BASE_URL}/ask`;
         const WEATHER_API_URL = `${CLOUD_RUN_BASE_URL}/weather_bengaluru`;
-        const NEWS_API_URL = `${CLOUD_RUN_BASE_URL}/news_headlines`;   
+        const NEWS_API_URL = `${CLOUD_RUN_BASE_URL}/news_headlines`;     
+
         let currentPromptUser = '@You>';
         terminalPrompt.textContent = currentPromptUser + ' ';
 
@@ -370,4 +376,3 @@
     </script>
 </body>
 </html>
-```
