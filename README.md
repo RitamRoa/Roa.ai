@@ -9,8 +9,7 @@ just open the index.html, wont work if you open up the above link. Used ai for s
 
 ## what?
 
-so it is more of a fact-checker, the thing is : right now it might be very vulnerable to prompt injections, i need to fix that up.
-as of 16th august: now should work if you open up the index and when you download the apk... might be few bugs need to fix that up (ui also)
+so it is more of a fact-checker.
 
 ## how?
 
@@ -30,4 +29,4 @@ langgraph
 
 ## why?
 
-well i always wanted to do some kinda of app. This is something that i was able to do while just learning how to do an ai agent: the guide of which was there in the latest open-source magazine. So if you dont mind, you can always test out the app roa-ai.apk
+well i always wanted to do some kinda of app. This is something that i was able to do while just learning how to do an ai agent: the guide of which was there in the latest open-source magazine. So if you dont mind, you can always test out the app roa-ai.apk, for this dm me in my socials (handles at profile).
