@@ -115,6 +115,18 @@
             margin-right: 10px;
         }
 
+        /* Link styling within chat messages */
+        .message a {
+            color: #0FF; /* Bright aqua for links */
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        .message a:hover {
+            color: #5FFF; /* Lighter aqua on hover */
+        }
+
+
         /* Unique AI Response Text Animation - applied to all AI responses */
         .ai-response-text {
             display: inline-block; /* Essential for transform/opacity on text */
@@ -257,19 +269,40 @@
             return `[${hours}:${minutes}:${seconds}]`;
         }
 
+        // NEW: Function to parse basic Markdown links [text](url)
+        function parseMarkdownLinks(text) {
+            // Regex to find [text](url)
+            const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+            return text.replace(regex, '<a href="$2" target="_blank">$1</a>');
+        }
+
         function addMessage(text, sender) {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message');
 
             const timestamp = getCurrentTime();
             
+            let messageContent = text;
+            if (sender === 'ai') {
+                // Parse markdown links ONLY for AI messages
+                messageContent = parseMarkdownLinks(text);
+            }
+
             if (sender === 'user') {
-                msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">${currentPromptUser}</span> ${text}`;
+                msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">${currentPromptUser}</span> ${messageContent}`;
             } else {
-                msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">@Roa></span> <span class="ai-response-text">${text}</span>`;
+                msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">@Roa></span> <span class="ai-response-text">${messageContent}</span>`;
             }
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Handle clicking on links within the WebView
+            msgDiv.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault(); // Prevent default WebView navigation
+                    window.open(this.href, '_system'); // Open link in external browser/system viewer
+                });
+            });
         }
 
         function setInputState(disabled) {
