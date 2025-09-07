@@ -4,7 +4,7 @@ basically learnt on api calling on how you can efficietly use it my roa.py file 
 i have hosted backend in google cloud, 
 just open the index.html, wont work if you open up the above link. Used ai for setting up dockerfile cuz i knew too less about it.
 
-<img width="1676" height="852" alt="Screenshot 2025-09-06 at 1 32 36 AM" src="https://github.com/user-attachments/assets/88916a93-8e55-49c7-af9d-c94c19fd4b17" />
+<img width="1680" height="851" alt="Screenshot 2025-09-07 at 2 22 56 PM" src="https://github.com/user-attachments/assets/a2ad5aa4-2d47-424a-9bc5-c8d48fc998c4" />
 
 
 ## what?
