@@ -16,13 +16,13 @@ from langgraph.graph import StateGraph, END
 # Set your Google AI API key here
 # For Cloud Run, this will be set as an environment variable in the deployment configuration
 # For local testing, ensure it's set in your environment
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBys6zKt9RtgAOEjYrLvq6CjxAkqLGxSzQ")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "google-api")
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 # IMPORTANT: Please replace the placeholder keys below with your own valid keys.
 # Get a free key from OpenWeatherMap and GNews.
-OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "0d72d2c544944b4f8baeb2889908a64c")
-GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY", "eec25d1d991eb57d906c65fbd2cf05e2")
+OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "open-weather-api")
+GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY", "gnews-api")
 
 # Initialize the LLM with the gemini-1.5-flash-latest model
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
