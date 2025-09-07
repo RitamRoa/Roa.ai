@@ -133,6 +133,13 @@
             animation: text-decode-reveal 1s ease-out forwards; /* Apply decoding animation */
             opacity: 0; /* Start invisible for this animation */
         }
+        
+        /* FIX: Ensure the article list text is always visible */
+        .articles-list {
+            opacity: 1;
+            animation: none;
+            color: #0C0; /* Explicitly set the text color */
+        }
 
         /* Input Area */
         #input-area {
@@ -232,7 +239,6 @@
     <div id="chat-container"></div>
     <div id="status-label">Status: Ready</div>
 
-    <!-- NEW: Action Buttons Area -->
     <div id="action-buttons">
         <button id="weather-button" class="action-button">Weather in Bengaluru</button>
         <button id="news-button" class="action-button">Top Headlines</button>
@@ -249,14 +255,13 @@
         const sendButton = document.getElementById('send-button');
         const statusLabel = document.getElementById('status-label');
         const terminalPrompt = document.getElementById('terminal-prompt');
-        const weatherButton = document.getElementById('weather-button'); // New button element
-        const newsButton = document.getElementById('news-button');     // New button element
+        const weatherButton = document.getElementById('weather-button');
+        const newsButton = document.getElementById('news-button');
 
-        // UPDATED: API URLs now point to your deployed Cloud Run service
         const CLOUD_RUN_BASE_URL = 'https://roa-expert-system-115413225766.asia-south1.run.app';
         const API_URL = `${CLOUD_RUN_BASE_URL}/ask`;
         const WEATHER_API_URL = `${CLOUD_RUN_BASE_URL}/weather_bengaluru`;
-        const NEWS_API_URL = `${CLOUD_RUN_BASE_URL}/news_headlines`;     
+        const NEWS_API_URL = `${CLOUD_RUN_BASE_URL}/news_headlines`;
 
         let currentPromptUser = '@You>';
         terminalPrompt.textContent = currentPromptUser + ' ';
@@ -269,9 +274,7 @@
             return `[${hours}:${minutes}:${seconds}]`;
         }
 
-        // NEW: Function to parse basic Markdown links [text](url)
         function parseMarkdownLinks(text) {
-            // Regex to find [text](url)
             const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
             return text.replace(regex, '<a href="$2" target="_blank">$1</a>');
         }
@@ -279,15 +282,12 @@
         function addMessage(text, sender) {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message');
-
+            msgDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
             const timestamp = getCurrentTime();
-            
             let messageContent = text;
             if (sender === 'ai') {
-                // Parse markdown links ONLY for AI messages
                 messageContent = parseMarkdownLinks(text);
             }
-
             if (sender === 'user') {
                 msgDiv.innerHTML = `<span class="timestamp">${timestamp}</span> <span class="prefix">${currentPromptUser}</span> ${messageContent}`;
             } else {
@@ -295,14 +295,32 @@
             }
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-
-            // Handle clicking on links within the WebView
             msgDiv.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', function(event) {
-                    event.preventDefault(); // Prevent default WebView navigation
-                    window.open(this.href, '_system'); // Open link in external browser/system viewer
+                    event.preventDefault();
+                    window.open(this.href, '_system');
                 });
             });
+        }
+        
+        function displayArticles(articles) {
+            if (!articles || articles.length === 0) return;
+            const articlesList = document.createElement('div');
+            articlesList.classList.add('message', 'ai-message', 'articles-list');
+            articlesList.innerHTML = `<span class="timestamp">${getCurrentTime()}</span> <span class="prefix">@Roa></span>`;
+            
+            let articlesHtml = `<ul style="list-style-type: none; padding-left: 0;">`;
+            articles.forEach((article, index) => {
+                articlesHtml += `<li>${index + 1}. <a href="${article.url}" target="_blank">${article.title}</a> (Source: ${article.source})</li>`;
+            });
+            articlesHtml += `</ul>`;
+
+            const articlesContent = document.createElement('span');
+            // FIX: Removed the .ai-response-text class to prevent the transparency issue
+            articlesContent.innerHTML = articlesHtml;
+            articlesList.appendChild(articlesContent);
+            chatContainer.appendChild(articlesList);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         function setInputState(disabled) {
@@ -320,20 +338,16 @@
         async function sendMessage() {
             const query = userInput.value.trim();
             if (!query) return;
-
             addMessage(query, 'user');
             userInput.value = '';
             userInput.focus();
-
             if (query.toLowerCase() === 'quit' || query.toLowerCase() === 'exit') {
                 addMessage("Goodbye! Exiting session.", 'ai');
                 statusLabel.textContent = "Status: Session ended.";
-                setInputState(true); // Disable all inputs
+                setInputState(true);
                 return;
             }
-
-            setInputState(true); // Disable inputs while thinking
-
+            setInputState(true);
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -341,9 +355,11 @@
                     body: JSON.stringify({ query: query })
                 });
                 const data = await response.json();
-
                 if (response.ok) {
                     addMessage(data.response, 'ai');
+                    if (data.articles) {
+                        displayArticles(data.articles);
+                    }
                     statusLabel.textContent = `Status: Ready (${data.time_taken})`;
                 } else {
                     addMessage(`Error: ${data.error || 'Unknown error'}`, 'ai');
@@ -354,25 +370,24 @@
                 statusLabel.textContent = 'Status: Network Error';
                 console.error('Fetch error (general):', error);
             } finally {
-                setInputState(false); // Re-enable inputs
+                setInputState(false);
             }
         }
 
         async function sendDirectApiRequest(endpoint, queryText) {
-            addMessage(queryText, 'user'); // Show user's "action"
-            userInput.value = ''; // Clear input field if something was there
-            userInput.focus(); // Keep focus
-
-            setInputState(true); // Disable inputs while thinking
-
+            addMessage(queryText, 'user');
+            userInput.value = '';
+            userInput.focus();
+            setInputState(true);
             try {
-                // Ensure correct HTTP method for direct API calls (GET)
                 const response = await fetch(endpoint, { method: 'GET' }); 
                 const data = await response.json();
-
                 if (response.ok) {
                     addMessage(data.response, 'ai');
-                    statusLabel.textContent = `Status: Ready (${data.time_taken || 'N/A'})`; // time_taken might be N/A for GET
+                    if (data.articles) {
+                        displayArticles(data.articles);
+                    }
+                    statusLabel.textContent = `Status: Ready (${data.time_taken || 'N/A'})`;
                 } else {
                     addMessage(`Error: ${data.error || 'Unknown error'}`, 'ai');
                     statusLabel.textContent = 'Status: Error';
@@ -382,11 +397,10 @@
                 statusLabel.textContent = 'Status: Network Error';
                 console.error('Fetch error (direct API):', error);
             } finally {
-                setInputState(false); // Re-enable inputs
+                setInputState(false);
             }
         }
 
-        // Event Listeners for Buttons
         sendButton.addEventListener('click', sendMessage);
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -401,8 +415,6 @@
             sendDirectApiRequest(NEWS_API_URL, "Top Headlines");
         });
 
-
-        // Initial welcome messages with terminal formatting
         addMessage("I am Roa", "ai");
         addMessage("I give quick answers to your questions, or you can use the direct buttons below!", "ai");
         addMessage("Type 'quit' or 'exit' to end the session.", "ai");

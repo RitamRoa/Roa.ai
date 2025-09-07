@@ -1,26 +1,28 @@
 import os
 import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
 
-# LangGraph and Google AI imports
-from langchain_google_genai import ChatGoogleGenerativeAI
+# This is the missing import that caused the crash.
+# You must install this library using pip:
+# pip install langchain-google-genai
+from langchain_google_genai import ChatGoogleGenerativeAI 
 from pydantic import BaseModel
 from langgraph.graph import StateGraph, END
 
 # --- API Keys ---
 # Set your Google AI API key here
 # For Cloud Run, this will be set as an environment variable in the deployment configuration
-# For local testing, ensure it's set in your environment or hardcoded temporarily
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "your-google-api")
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY # Ensure it's set for langchain
+# For local testing, ensure it's set in your environment
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBys6zKt9RtgAOEjYrLvq6CjxAkqLGxSzQ")
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
-# IMPORTANT: Insert your actual API keys below.
-# For Cloud Run, these will also be set as environment variables.
-OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "your-openweather-api")
-GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY", "your-gnews-api") # <--- Paste your GNews API key here for local testing!
+# IMPORTANT: Please replace the placeholder keys below with your own valid keys.
+# Get a free key from OpenWeatherMap and GNews.
+OPENWEATHERMAP_API_KEY = os.environ.get("OPENWEATHERMAP_API_KEY", "0d72d2c544944b4f8baeb2889908a64c")
+GNEWS_API_KEY = os.environ.get("GNEWS_API_KEY", "eec25d1d991eb57d906c65fbd2cf05e2")
 
 # Initialize the LLM with the gemini-1.5-flash-latest model
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
@@ -31,6 +33,7 @@ class ExpertSystemState(BaseModel):
     question_type: str = None
     response: str = None
     is_injection: bool = False # Flag for injection detection
+    articles: List[Dict[str, str]] = [] # New field to hold article data
 
 # log_event will just print to console for the API backend
 def log_event(step: str, message: str):
@@ -91,7 +94,13 @@ def injection_detector(state: ExpertSystemState) -> Dict[str, Any]:
 def _fetch_weather_data(city: str) -> Dict[str, Any]:
     """Helper function to fetch weather data from OpenWeatherMap."""
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
-    complete_url = f"{base_url}q={city}&appid={OPENWEATHERMAP_API_KEY}&units=metric"
+    # Use the variable with your valid API key here
+    complete_url = f"{base_url}q={city}&appid={OPENWEATHERMAP_API_KEY}&units=metric" 
+    
+    # Check if the API key is set before making the request
+    if OPENWEATHERMAP_API_KEY == "YOUR_OPENWEATHERMAP_API_KEY_HERE":
+        return {"response": "Weather API key is not set. Please replace the placeholder in roa.py."}
+
     try:
         response = requests.get(complete_url)
         data = response.json()
@@ -119,52 +128,101 @@ def _fetch_weather_data(city: str) -> Dict[str, Any]:
         return {"response": f"An unexpected error occurred while processing weather data: {e}"}
 
 def weather(state: ExpertSystemState) -> Dict[str, Any]:
-    """Handles weather-related queries via LangGraph."""
-    log_event("weather", "AI-routed weather. Attempting to fetch real-time weather data.")
-    city = "Bengaluru" 
-    result = _fetch_weather_data(city)
-    log_event("_fetch_weather_data", f"Successfully fetched weather for {city}.")
-    return {"response": result["response"]}
+    """
+    Handles weather queries by extracting the city and calling the helper function.
+    """
+    log_event("weather", "AI-routed weather. Extracting city from query.")
+    user_input = state.user_input
+    
+    # Use LLM to extract the city from the user query
+    city_prompt = f"From the following query, extract only the name of the city. If no city is mentioned, default to 'Bengaluru'.\nQuery: '{user_input}'\nCity:"
+    
+    try:
+        city_response = llm.invoke(city_prompt).content.strip()
+        city = city_response.split('\n')[0].strip() # Take the first line
+        if not city:
+            city = "Bengaluru"
+        
+        log_event("weather", f"Extracted city: {city}")
+        
+        return _fetch_weather_data(city)
+        
+    except Exception as e:
+        log_event("weather", f"Error during city extraction: {e}. Defaulting to Bengaluru.")
+        return _fetch_weather_data("Bengaluru")
 
-def _fetch_news_data(query_topic: str) -> Dict[str, Any]:
-    """Helper function to fetch news data from GNews API and format with links."""
-    if not GNEWS_API_KEY or GNEWS_API_KEY == "YOUR_GNEWS_API_KEY":
-        return {"response": "News API key is not configured. Please set a valid GNews API key."}
+# ... (rest of the file remains the same)
+
+# ... (rest of the file remains the same)
+
+def _fetch_gnews(country: str = None) -> List[Dict[str, str]]:
+    """Helper function to fetch headlines for a specific country or worldwide."""
+    base_url = "https://gnews.io/api/v4/top-headlines?"
     
-    base_url = "https://gnews.io/api/v4/search?q="
-    complete_url = f"{base_url}{query_topic}&lang=en&country=in&max=5&apikey={GNEWS_API_KEY}"
-    
+    # Use the appropriate country code if provided, otherwise fetch worldwide news.
+    if country:
+        complete_url = f"{base_url}token={GNEWS_API_KEY}&lang=en&country={country}"
+    else:
+        complete_url = f"{base_url}token={GNEWS_API_KEY}&lang=en"
+        
+    log_event("news_helper", f"Fetching news for country: {country if country else 'worldwide'}")
+
     try:
         response = requests.get(complete_url)
         data = response.json()
         
-        if data.get("articles"):
-            headlines = data["articles"]
-            formatted_headlines = "Here are some top headlines:\n"
-            for i, article in enumerate(headlines, 1):
-                title = article.get("title")
-                source_name = article.get("source", {}).get("name")
-                article_url = article.get("url")
-                
-                formatted_headlines += f"{i}. {title} ([Source: {source_name}]({article_url}))\n"
-            
-            return {"response": formatted_headlines}
+        if response.status_code == 200 and "articles" in data:
+            # Return the list of articles.
+            return data["articles"]
         else:
-            error_message = data.get("message", "No articles found or an unknown error occurred.")
-            return {"response": f"Could not fetch news headlines. Error: {error_message}."}
-            
+            log_event("news_helper", f"API error for {country if country else 'worldwide'}: {data.get('errors', 'Unknown error')}")
+            return []
     except requests.exceptions.RequestException as e:
-        return {"response": f"Network error fetching news: {e}. Please check your internet connection or API endpoint."}
-    except Exception as e:
-        return {"response": f"An unexpected error occurred while processing news data: {e}"}
+        log_event("news_helper", f"Network error fetching news: {e}")
+        return []
+
+# ... (rest of the file remains the same)
 
 def news(state: ExpertSystemState) -> Dict[str, Any]:
-    """Handles news-related queries via LangGraph."""
-    log_event("news", "AI-routed news. Attempting to fetch real-time news headlines.")
-    query_topic = "latest headlines"
-    result = _fetch_news_data(query_topic)
-    log_event("news", "Successfully fetched news headlines.")
-    return {"response": result["response"]}
+    """
+    Handles news-related queries by fetching top headlines from around the world.
+    """
+    log_event("news", "AI-routed news. Fetching top headlines from GNews API.")
+    base_url = "https://gnews.io/api/v4/top-headlines?"
+    
+    # We will only specify the token and language, which defaults to worldwide headlines.
+    complete_url = f"{base_url}token={GNEWS_API_KEY}&lang=en"
+    
+    # Check if the API key is set before making the request
+    if GNEWS_API_KEY == "YOUR_GNEWS_API_KEY_HERE":
+        return {"response": "News API key is not set. Please replace the placeholder in roa.py.", "articles": []}
+
+    try:
+        response = requests.get(complete_url)
+        data = response.json()
+        
+        if response.status_code == 200 and "articles" in data:
+            articles = data["articles"]
+            if not articles:
+                return {"response": "Could not find any top headlines at this time.", "articles": []}
+            
+            # Extract title, source, and URL for the top 5 articles
+            extracted_articles = [
+                {"title": article['title'], "source": article['source']['name'], "url": article['url']}
+                for article in articles[:5]
+            ]
+            response_text = "Here are some top headlines from around the world:\n"
+            log_event("news", "Successfully fetched worldwide English headlines.")
+            return {"response": response_text, "articles": extracted_articles}
+        else:
+            error_message = data.get("errors", ["Unknown API error."])
+            log_event("news", f"GNews API returned an error: {error_message}")
+            return {"response": f"An error occurred while fetching news headlines: {error_message}.", "articles": []}
+    except requests.exceptions.RequestException as e:
+        log_event("news", f"Network error during GNews API call: {e}")
+        return {"response": f"Network error fetching news: {e}.", "articles": []}
+
+# ... (rest of the file remains the same)
 
 def joke(state: ExpertSystemState) -> Dict[str, Any]:
     """Handles joke-related queries by generating a joke using Gemini."""
@@ -255,12 +313,20 @@ def ask_expert_system():
     try:
         # Initial state should now only include user_input
         final_state = app_langgraph.invoke({"user_input": user_query})
-        response_content = final_state['response']
-        end_time = time.time()
-        return jsonify({
-            "response": response_content,
-            "time_taken": f"{end_time - start_time:.2f} seconds"
-        })
+        
+        # Check if the response contains articles, and send them
+        if "articles" in final_state:
+            return jsonify({
+                "response": final_state.get("response"),
+                "articles": final_state.get("articles"),
+                "time_taken": f"{time.time() - start_time:.2f} seconds"
+            })
+        else:
+            return jsonify({
+                "response": final_state.get("response"),
+                "time_taken": f"{time.time() - start_time:.2f} seconds"
+            })
+
     except Exception as e:
         print(f"Error during AI processing: {e}")
         return jsonify({"error": str(e)}), 500
@@ -283,10 +349,12 @@ def get_news_headlines():
     """Directly fetches top headlines without LangGraph routing."""
     log_event("API Direct", "Received request for top headlines.")
     start_time = time.time()
-    result = _fetch_news_data("latest headlines") # Use the helper function directly
+    # Now, the 'news' function returns a dictionary with 'response' and 'articles'
+    result = news({"user_input": "top headlines"})
     end_time = time.time()
     return jsonify({
         "response": result["response"],
+        "articles": result.get("articles", []), # Ensure articles is always a list
         "time_taken": f"{end_time - start_time:.2f} seconds"
     })
 
