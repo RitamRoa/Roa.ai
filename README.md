@@ -9,7 +9,7 @@ just open the index.html, wont work if you open up the above link. Used ai for s
 
 ## what?
 
-so it is more of a fact-checker.
+so it is more of a one-liner fact-checker
 
 ## how?
 
