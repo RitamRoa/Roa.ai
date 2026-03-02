@@ -1,4 +1,4 @@
-# my own ai (well took a bit help for folder structure cuz i am still learning..
+# my own ai (well took a bit help for folder structure cuz i am still learning..)))))))
 
 basically learnt on api calling on how you can efficietly use it my roa.py file is perfect for that. Used ai for setting up flask and frontend YES I LOVE THE BITCHAT INTERFACE thank you so much jackjackbits
 i have hosted backend in google cloud, 
